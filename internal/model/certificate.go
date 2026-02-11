@@ -11,6 +11,6 @@ type Certificate struct {
 	Issuer            string
 	NotBefore         time.Time
 	NotAfter          time.Time
-	FingerPrintSha256 string
+	FingerprintSHA256 string
 	CreatedAt         time.Time
 }

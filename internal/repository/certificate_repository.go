@@ -33,7 +33,7 @@ func (cr *CertificateRepository) Create(ctx context.Context, cert *model.Certifi
 		cert.Issuer,
 		cert.NotBefore,
 		cert.NotAfter,
-		cert.FingerPrintSHA256,
+		cert.FingerprintSHA256,
 		cert.CreatedAt)
 	if err != nil {
 		var sqlErr *sqlite.Error
@@ -61,7 +61,7 @@ func (cr *CertificateRepository) GetByID(ctx context.Context, id string) (*model
 		&returnVal.Issuer,
 		&returnVal.NotBefore,
 		&returnVal.NotAfter,
-		&returnVal.FingerPrintSHA256,
+		&returnVal.FingerprintSHA256,
 		&returnVal.CreatedAt)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -94,7 +94,7 @@ func (cr *CertificateRepository) List(ctx context.Context) ([]model.Certificate,
 			&item.Issuer,
 			&item.NotBefore,
 			&item.NotAfter,
-			&item.FingerPrintSHA256,
+			&item.FingerprintSHA256,
 			&item.CreatedAt)
 		if err2 != nil {
 			return nil, fmt.Errorf("Querying for certs: %w", err2)
