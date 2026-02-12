@@ -101,9 +101,6 @@ func (cs *certificateService) Delete(ctx context.Context, id string) error {
 	}
 	err := cs.repo.Delete(ctx, id)
 	if err != nil {
-		if errors.Is(err, repository.ErrConflict) {
-			return repository.ErrConflict
-		}
 		if errors.Is(err, repository.ErrNotFound) {
 			return repository.ErrNotFound
 		}

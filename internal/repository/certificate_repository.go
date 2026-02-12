@@ -16,15 +16,22 @@ var (
 	ErrConflict = errors.New("conflict")
 )
 
-type CertificateRepository struct {
+type CertificateRepository interface {
+	Create(ctx context.Context, cert *model.Certificate) error
+	GetByID(ctx context.Context, id string) (*model.Certificate, error)
+	List(ctx context.Context) ([]model.Certificate, error)
+	Delete(ctx context.Context, id string) error
+}
+
+type certificateRepository struct {
 	db *sql.DB
 }
 
-func NewCertificateRepository(db *sql.DB) *CertificateRepository {
-	return &CertificateRepository{db: db}
+func NewCertificateRepository(db *sql.DB) *certificateRepository {
+	return &certificateRepository{db: db}
 }
 
-func (cr *CertificateRepository) Create(ctx context.Context, cert *model.Certificate) error {
+func (cr *certificateRepository) Create(ctx context.Context, cert *model.Certificate) error {
 
 	_, err := cr.db.ExecContext(ctx, "INSERT INTO certificates (id, common_name, serial_number, issuer, not_before, not_after, fingerprint_sha256, created_at)  VALUES(?,?,?,?,?,?,?,?)",
 		cert.Id,
@@ -47,7 +54,7 @@ func (cr *CertificateRepository) Create(ctx context.Context, cert *model.Certifi
 	return nil
 }
 
-func (cr *CertificateRepository) GetByID(ctx context.Context, id string) (*model.Certificate, error) {
+func (cr *certificateRepository) GetByID(ctx context.Context, id string) (*model.Certificate, error) {
 
 	result := cr.db.QueryRowContext(
 		ctx,
@@ -73,7 +80,7 @@ func (cr *CertificateRepository) GetByID(ctx context.Context, id string) (*model
 	return &returnVal, nil
 }
 
-func (cr *CertificateRepository) List(ctx context.Context) ([]model.Certificate, error) {
+func (cr *certificateRepository) List(ctx context.Context) ([]model.Certificate, error) {
 
 	result, err := cr.db.QueryContext(
 		ctx,
@@ -107,7 +114,7 @@ func (cr *CertificateRepository) List(ctx context.Context) ([]model.Certificate,
 	return retValue, nil
 }
 
-func (cr *CertificateRepository) Delete(ctx context.Context, id string) error {
+func (cr *certificateRepository) Delete(ctx context.Context, id string) error {
 
 	result, err := cr.db.ExecContext(
 		ctx,
