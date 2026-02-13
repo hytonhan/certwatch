@@ -40,6 +40,10 @@ func (fcr FakeCertRepo) Delete(ctx context.Context, id string) error {
 	return repository.ErrNotFound
 }
 
+func (fcr FakeCertRepo) ListExpiring(ctx context.Context, before time.Time, now time.Time) ([]model.Certificate, error) {
+	return []model.Certificate{}, nil
+}
+
 func TestCreate(t *testing.T) {
 	tests := []struct {
 		name     string

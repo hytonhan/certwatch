@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/hytonhan/certwatch/internal/model"
 	"modernc.org/sqlite"
@@ -20,6 +21,7 @@ type CertificateRepository interface {
 	Create(ctx context.Context, cert *model.Certificate) error
 	GetByID(ctx context.Context, id string) (*model.Certificate, error)
 	List(ctx context.Context) ([]model.Certificate, error)
+	ListExpiring(ctx context.Context, before time.Time, now time.Time) ([]model.Certificate, error)
 	Delete(ctx context.Context, id string) error
 }
 
@@ -91,7 +93,7 @@ func (cr *certificateRepository) List(ctx context.Context) ([]model.Certificate,
 	}
 	defer result.Close()
 
-	var retValue []model.Certificate
+	retValue := []model.Certificate{}
 	for result.Next() {
 		item := model.Certificate{}
 		err2 := result.Scan(
@@ -110,6 +112,44 @@ func (cr *certificateRepository) List(ctx context.Context) ([]model.Certificate,
 	}
 	if er := result.Err(); er != nil {
 		return nil, fmt.Errorf("Querying for certs: %w", er)
+	}
+	return retValue, nil
+}
+
+func (cr *certificateRepository) ListExpiring(ctx context.Context, before time.Time, now time.Time) ([]model.Certificate, error) {
+	// fmt.Printf("before: %v. now: %v.\n", before, now)
+	result, err := cr.db.QueryContext(
+		ctx,
+		`SELECT id, common_name, serial_number, issuer, not_before, not_after, fingerprint_sha256, created_at 
+		FROM certificates
+		WHERE not_after < ? AND not_after > ?`,
+		before,
+		now,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("Querying for expiring certs: %w", err)
+	}
+	defer result.Close()
+
+	retValue := []model.Certificate{}
+	for result.Next() {
+		item := model.Certificate{}
+		err2 := result.Scan(
+			&item.Id,
+			&item.CommonName,
+			&item.SerialNumber,
+			&item.Issuer,
+			&item.NotBefore,
+			&item.NotAfter,
+			&item.FingerprintSHA256,
+			&item.CreatedAt)
+		if err2 != nil {
+			return nil, fmt.Errorf("Querying for expiring certs: %w", err2)
+		}
+		retValue = append(retValue, item)
+	}
+	if er := result.Err(); er != nil {
+		return nil, fmt.Errorf("Querying for expiring certs: %w", er)
 	}
 	return retValue, nil
 }

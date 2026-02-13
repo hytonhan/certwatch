@@ -14,6 +14,13 @@ import (
 	dto "github.com/hytonhan/certwatch/internal/service/DTO"
 )
 
+type ExpiryOption int
+
+const (
+	IncludeExpired ExpiryOption = iota
+	ExcludeExpired
+)
+
 var (
 	ErrInvalidInput = errors.New("invalid_input")
 )
@@ -22,15 +29,17 @@ type CertificateService interface {
 	Create(ctx context.Context, input dto.CreateCertificateInput) (*model.Certificate, error)
 	Get(ctx context.Context, id string) (*model.Certificate, error)
 	List(ctx context.Context) ([]model.Certificate, error)
+	ListExpiring(ctx context.Context, window time.Duration, expiryOption ExpiryOption) ([]model.Certificate, error)
 	Delete(ctx context.Context, id string) error
 }
 
 type certificateService struct {
-	repo repository.CertificateRepository
+	repo  repository.CertificateRepository
+	clock Clock
 }
 
 func New(repo repository.CertificateRepository) CertificateService {
-	return &certificateService{repo: repo}
+	return &certificateService{repo: repo, clock: NewClock()}
 }
 
 func (cs *certificateService) Create(ctx context.Context, input dto.CreateCertificateInput) (*model.Certificate, error) {
@@ -44,7 +53,7 @@ func (cs *certificateService) Create(ctx context.Context, input dto.CreateCertif
 	na := input.NotAfter.UTC()
 	fp := strings.ToLower(input.FingerprintSHA256)
 	id := uuid.NewString()
-	createdAt := time.Now().UTC()
+	createdAt := cs.clock.Now().UTC()
 
 	cert := model.Certificate{
 		Id:                id,
@@ -61,9 +70,6 @@ func (cs *certificateService) Create(ctx context.Context, input dto.CreateCertif
 	if err != nil {
 		if errors.Is(err, repository.ErrConflict) {
 			return nil, repository.ErrConflict
-		}
-		if errors.Is(err, repository.ErrNotFound) {
-			return nil, repository.ErrNotFound
 		}
 		return nil, fmt.Errorf("Creating cert: %w", err)
 	}
@@ -90,6 +96,26 @@ func (cs *certificateService) List(ctx context.Context) ([]model.Certificate, er
 	certs, err := cs.repo.List(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("Getting many certs: %w", err)
+	}
+
+	return certs, nil
+}
+
+func (cs *certificateService) ListExpiring(ctx context.Context, window time.Duration, expiryOption ExpiryOption) ([]model.Certificate, error) {
+
+	if window == 0 {
+		return nil, ErrInvalidInput
+	}
+	var now time.Time
+	if expiryOption == IncludeExpired {
+		now = time.Time{}
+	} else {
+		now = cs.clock.Now().UTC()
+	}
+
+	certs, err := cs.repo.ListExpiring(ctx, cs.clock.Now().UTC().Add(window), now)
+	if err != nil {
+		return nil, fmt.Errorf("Getting expired certs: %w", err)
 	}
 
 	return certs, nil
