@@ -11,6 +11,7 @@ import (
 	"github.com/hytonhan/certwatch/internal/config"
 	"github.com/hytonhan/certwatch/internal/db"
 	"github.com/hytonhan/certwatch/internal/http/handler"
+	"github.com/hytonhan/certwatch/internal/monitor"
 	"github.com/hytonhan/certwatch/internal/repository"
 	"github.com/hytonhan/certwatch/internal/service"
 )
@@ -54,6 +55,9 @@ func New(cfg config.Config) (*App, error) {
 		IdleTimeout:       60 * time.Second,
 		MaxHeaderBytes:    1 << 20,
 	}
+
+	monitor := monitor.NewMonitor(certSrv, cfg.ExpiryCheckInterval, cfg.ExpiryWindow, logger)
+	go monitor.Start(ctx)
 
 	return &App{Config: cfg, DB: sqlDB, Server: srv}, nil
 }
