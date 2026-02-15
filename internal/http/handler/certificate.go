@@ -38,7 +38,9 @@ func (h *CertificateHandler) HandleCreate(w http.ResponseWriter, r *http.Request
 	var req CreateRequest
 	r.Body = http.MaxBytesReader(w, r.Body, 1<<20) // 1MB
 
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&req); err != nil {
 		http.Error(w, "invalid json", http.StatusBadRequest)
 		return
 	}
@@ -59,6 +61,11 @@ func (h *CertificateHandler) HandleCreate(w http.ResponseWriter, r *http.Request
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
+		if errors.Is(err, service.ErrInvalidDateRange) {
+			h.logger.InfoContext(r.Context(), "Create failed: invalid date range")
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
 		if errors.Is(err, repository.ErrConflict) {
 			h.logger.InfoContext(r.Context(), "Create failed: conflict")
 			http.Error(w, err.Error(), http.StatusConflict)
@@ -69,7 +76,8 @@ func (h *CertificateHandler) HandleCreate(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	h.logger.InfoContext(r.Context(), "Created certificate with id "+cert.Id)
+	h.logger.InfoContext(r.Context(), "Created certificate",
+		"id", cert.Id)
 	w.WriteHeader(http.StatusCreated)
 	w.Header().Set("Contect-Type", "application/json")
 	json.NewEncoder(w).Encode(cert.Id)
@@ -99,7 +107,8 @@ func (h *CertificateHandler) HandleGet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.logger.InfoContext(r.Context(), "Found cert with id "+id)
+	h.logger.InfoContext(r.Context(), "Found cert",
+		"id", id)
 	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Contect-Type", "application/json")
 	json.NewEncoder(w).Encode(cert)
@@ -143,7 +152,9 @@ func (h *CertificateHandler) HandleList(w http.ResponseWriter, r *http.Request) 
 				option = service.ExcludeExpired
 			}
 		}
-		h.logger.InfoContext(r.Context(), "Params: window: "+within+". expired: "+expired)
+		h.logger.InfoContext(r.Context(), "Params",
+			"window", within,
+			"expired", expired)
 		certs, err = h.service.ListExpiring(r.Context(), d, option)
 		if err != nil {
 			h.logger.WarnContext(r.Context(), "List failed for unknown reason")
@@ -178,6 +189,7 @@ func (h *CertificateHandler) HandleDelete(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	h.logger.InfoContext(r.Context(), "Deleted cert with id "+id)
+	h.logger.InfoContext(r.Context(), "Deleted cert",
+		"id", id)
 	w.WriteHeader(http.StatusNoContent)
 }

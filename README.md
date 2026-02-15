@@ -36,37 +36,6 @@ Repository Layer (parameterized SQL only)
 SQLite Database
 ```
 
-### Layer Responsibilities
-
-
-#### HTTP Layer
-
-- Enforces content-type
-- Limits request body size
-- Rejects unknown JSON fields
-- Injects request ID
-- Maps internal errors to sanitized responses
-
-#### Service Layer
-
-- Business validation
-- Expiry logic
-- Domain rules enforcement
-
-#### Repository Layer
-
-- Uses database/sql
-- Parameterized queries only
-- No dynamic SQL concatenation
-- Context timeouts enforced
-
-### Database Layer
-
-- CHECK constraints
-- UNIQUE constraints
-- Indexed expiry date
-- Foreign key enforcement enabled
-
 #### Features
 
 - Register certificate metadata
@@ -101,7 +70,7 @@ Validation rules:
 - All fields required
 - RFC3339 timestamps
 - not_after must be later than not_before
-- Fingerprint must be 64-character SHA-256 hex
+- Fingerprint must be 64-character hex
 - Unknown JSON fields rejected
 
 ### GET /certificates
@@ -230,7 +199,7 @@ The server listens on :8080 by default.
 
 ## Secure HTTP Configuration
 
-- The server enforces:
+The server enforces:
 - ReadTimeout
 - ReadHeaderTimeout
 - WriteTimeout

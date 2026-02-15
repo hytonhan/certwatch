@@ -22,7 +22,8 @@ const (
 )
 
 var (
-	ErrInvalidInput = errors.New("invalid_input")
+	ErrInvalidInput     = errors.New("invalid_input")
+	ErrInvalidDateRange = errors.New("invalid date range")
 )
 
 type CertificateService interface {
@@ -157,10 +158,10 @@ func validateInput(input dto.CreateCertificateInput) error {
 		return ErrInvalidInput
 	}
 	if input.NotBefore.IsZero() || input.NotAfter.IsZero() {
-		return ErrInvalidInput
+		return ErrInvalidDateRange
 	}
 	if !input.NotAfter.After(input.NotBefore) {
-		return ErrInvalidInput
+		return ErrInvalidDateRange
 	}
 
 	return nil
