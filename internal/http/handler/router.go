@@ -2,6 +2,8 @@ package handler
 
 import (
 	"net/http"
+
+	"github.com/hytonhan/certwatch/internal/middleware"
 )
 
 func (h *CertificateHandler) Router() http.Handler {
@@ -15,5 +17,7 @@ func (h *CertificateHandler) Router() http.Handler {
 	mux.HandleFunc("GET /certificates/{id}", h.HandleGet)
 	mux.HandleFunc("DELETE /certificates/{id}", h.HandleDelete)
 
-	return mux
+	loggedMux := middleware.LoggingMiddlewarefunc(h.logger)(mux)
+
+	return loggedMux
 }

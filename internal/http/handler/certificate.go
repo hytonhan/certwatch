@@ -34,7 +34,10 @@ func NewCertificateHandler(s service.CertificateService, log *slog.Logger) *Cert
 
 func (h *CertificateHandler) HandleCreate(w http.ResponseWriter, r *http.Request) {
 
-	h.logger.InfoContext(r.Context(), "Received Create request")
+	requestID := r.Context().Value("request_id").(string)
+
+	h.logger.InfoContext(r.Context(), "Received Create request",
+		"request_id", requestID)
 	var req CreateRequest
 	r.Body = http.MaxBytesReader(w, r.Body, 1<<20) // 1MB
 
@@ -57,27 +60,32 @@ func (h *CertificateHandler) HandleCreate(w http.ResponseWriter, r *http.Request
 	cert, err := h.service.Create(r.Context(), input)
 	if err != nil {
 		if errors.Is(err, service.ErrInvalidInput) {
-			h.logger.InfoContext(r.Context(), "Create failed: invalid input")
+			h.logger.InfoContext(r.Context(), "Create failed: invalid input",
+				"request_id", requestID)
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 		if errors.Is(err, service.ErrInvalidDateRange) {
-			h.logger.InfoContext(r.Context(), "Create failed: invalid date range")
+			h.logger.InfoContext(r.Context(), "Create failed: invalid date range",
+				"request_id", requestID)
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 		if errors.Is(err, repository.ErrConflict) {
-			h.logger.InfoContext(r.Context(), "Create failed: conflict")
+			h.logger.InfoContext(r.Context(), "Create failed: conflict",
+				"request_id", requestID)
 			http.Error(w, err.Error(), http.StatusConflict)
 			return
 		}
-		h.logger.WarnContext(r.Context(), "Create failed for unknown reason")
+		h.logger.WarnContext(r.Context(), "Create failed for unknown reason",
+			"request_id", requestID)
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
 
 	h.logger.InfoContext(r.Context(), "Created certificate",
-		"id", cert.Id)
+		"id", cert.Id,
+		"request_id", requestID)
 	w.WriteHeader(http.StatusCreated)
 	w.Header().Set("Contect-Type", "application/json")
 	json.NewEncoder(w).Encode(cert.Id)
@@ -85,7 +93,9 @@ func (h *CertificateHandler) HandleCreate(w http.ResponseWriter, r *http.Request
 
 func (h *CertificateHandler) HandleGet(w http.ResponseWriter, r *http.Request) {
 
-	h.logger.InfoContext(r.Context(), "Received get request")
+	requestID := r.Context().Value("request_id").(string)
+	h.logger.InfoContext(r.Context(), "Received get request",
+		"request_id", requestID)
 	r.Body = http.MaxBytesReader(w, r.Body, 1<<20) // 1MB
 
 	id := r.PathValue("id")
@@ -93,22 +103,27 @@ func (h *CertificateHandler) HandleGet(w http.ResponseWriter, r *http.Request) {
 	cert, err := h.service.Get(r.Context(), id)
 	if err != nil {
 		if errors.Is(err, service.ErrInvalidInput) {
-			h.logger.InfoContext(r.Context(), "Get failed: invalid input")
+			h.logger.InfoContext(r.Context(), "Get failed: invalid input",
+				"request_id", requestID)
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 		if errors.Is(err, repository.ErrNotFound) {
-			h.logger.InfoContext(r.Context(), "Get failed: not found with id "+id)
+			h.logger.InfoContext(r.Context(), "Get failed: not found",
+				"id", id,
+				"request_id", requestID)
 			http.Error(w, err.Error(), http.StatusNotFound)
 			return
 		}
-		h.logger.InfoContext(r.Context(), "Get failed for unkown reason")
+		h.logger.InfoContext(r.Context(), "Get failed for unkown reason",
+			"request_id", requestID)
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
 
 	h.logger.InfoContext(r.Context(), "Found cert",
-		"id", id)
+		"id", id,
+		"request_id", requestID)
 	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Contect-Type", "application/json")
 	json.NewEncoder(w).Encode(cert)
@@ -116,7 +131,9 @@ func (h *CertificateHandler) HandleGet(w http.ResponseWriter, r *http.Request) {
 
 func (h *CertificateHandler) HandleList(w http.ResponseWriter, r *http.Request) {
 
-	h.logger.InfoContext(r.Context(), "Received List request")
+	requestID := r.Context().Value("request_id").(string)
+	h.logger.InfoContext(r.Context(), "Received List request",
+		"request_id", requestID)
 	r.Body = http.MaxBytesReader(w, r.Body, 1<<20) // 1MB
 
 	var certs []model.Certificate
@@ -126,7 +143,8 @@ func (h *CertificateHandler) HandleList(w http.ResponseWriter, r *http.Request) 
 	if within == "" {
 		certs, err = h.service.List(r.Context())
 		if err != nil {
-			h.logger.WarnContext(r.Context(), "List failed for unknown reason")
+			h.logger.WarnContext(r.Context(), "List failed for unknown reason",
+				"request_id", requestID)
 			http.Error(w, "internal error", http.StatusInternalServerError)
 			return
 		}
@@ -154,10 +172,12 @@ func (h *CertificateHandler) HandleList(w http.ResponseWriter, r *http.Request) 
 		}
 		h.logger.InfoContext(r.Context(), "Params",
 			"window", within,
-			"expired", expired)
+			"expired", expired,
+			"request_id", requestID)
 		certs, err = h.service.ListExpiring(r.Context(), d, option)
 		if err != nil {
-			h.logger.WarnContext(r.Context(), "List failed for unknown reason")
+			h.logger.WarnContext(r.Context(), "List failed for unknown reason",
+				"request_id", requestID)
 			http.Error(w, "internal error", http.StatusInternalServerError)
 			return
 		}
@@ -172,7 +192,9 @@ func (h *CertificateHandler) HandleList(w http.ResponseWriter, r *http.Request) 
 
 func (h *CertificateHandler) HandleDelete(w http.ResponseWriter, r *http.Request) {
 
-	h.logger.InfoContext(r.Context(), "Received delete request")
+	requestID := r.Context().Value("request_id").(string)
+	h.logger.InfoContext(r.Context(), "Received delete request",
+		"request_id", requestID)
 	r.Body = http.MaxBytesReader(w, r.Body, 1<<20) // 1MB
 
 	id := r.PathValue("id")
@@ -180,16 +202,20 @@ func (h *CertificateHandler) HandleDelete(w http.ResponseWriter, r *http.Request
 	err := h.service.Delete(r.Context(), id)
 	if err != nil {
 		if errors.Is(err, repository.ErrNotFound) {
-			h.logger.InfoContext(r.Context(), "Delete failed: cert not found with id "+id)
+			h.logger.InfoContext(r.Context(), "Delete failed: cert not found",
+				"id", id,
+				"request_id", requestID)
 			http.Error(w, err.Error(), http.StatusNotFound)
 			return
 		}
-		h.logger.WarnContext(r.Context(), "Delete failed for unknown reason")
+		h.logger.WarnContext(r.Context(), "Delete failed for unknown reason",
+			"request_id", requestID)
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
 
 	h.logger.InfoContext(r.Context(), "Deleted cert",
-		"id", id)
+		"id", id,
+		"request_id", requestID)
 	w.WriteHeader(http.StatusNoContent)
 }
