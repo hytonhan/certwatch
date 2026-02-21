@@ -188,8 +188,44 @@ This simulates proactive certificate lifecycle management monitoring.
 - SQLite
 
 ### Setup
+
+#### Docker
+
+Clone the repo
 ```bash
-git clone <repo>
+git clone https://github.com/hytonhan/certwatch.git
+cd certwatch
+```
+
+Build the image
+```bash
+docker build -t certwatch:latest .
+```
+
+Run the container
+```bash
+docker run -d \
+  -p 8080:8080 \
+  -e DB_PATH=/data/certwatch.db \
+  -v certwatch_data:/data \
+  --name certwatch \
+  certwatch:latest
+```
+
+Check logs
+```bash
+docker logs certwatch
+```
+
+Test API
+```bash
+curl http://localhost:8080/certificates
+```
+
+
+#### Standalone
+```bash
+git clone https://github.com/hytonhan/certwatch.git
 cd certwatch
 go mod tidy
 go run ./cmd/server

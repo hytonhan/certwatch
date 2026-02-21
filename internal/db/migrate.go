@@ -4,12 +4,13 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"os"
 	"time"
+
+	"github.com/hytonhan/certwatch/migrations"
 )
 
 func RunMigrations(ctx context.Context, db *sql.DB, path string) error {
-	data, err := os.ReadFile(path)
+	data, err := migrations.MigrationFiles.ReadFile("001_init.sql")
 	if err != nil {
 		return fmt.Errorf("Read migration: %w", err)
 	}
